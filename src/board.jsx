@@ -1,25 +1,56 @@
 import React, { useState } from 'react';
+import { getRowIdx } from './utils';
+import { getPieceIcon } from './board-utils';
+import PieceController from './piece-controller';
 
 const ChessBoard = () => {
-    const [boardState, setBoardState] = useState([
-        [
-            4, 2, 3, 5, 6, 3, 2, 4, // 0 - empty
-            1, 1, 1, 1, 1, 1, 1, 1, // 1 - Pawn
-            0, 0, 0, 0, 0, 0, 0, 0, // 2 - Knight
-            0, 0, 0, 0, 0, 0, 0, 0, // 3 - Bishop
-            0, 0, 0, 0, 0, 0, 0, 0, // 4 - Rook
-            0, 0, 0, 0, 0, 0, 0, 0, // 5 - Queen
-            1, 1, 1, 1, 1, 1, 1, 1, // 6 - King
-            4, 2, 3, 5, 6, 3, 2, 4,
-        ]
-    ]);
+  const {
+    boardState,
+    playerColorBoardState,
+    setSelectedPieceIdx,
+    highlightedValidMoves,
+  } = PieceController();
+  const colorSquare = (squareIdx) => {
+    // Returns tailwind styles for how the square should currently look
+    if (getRowIdx(squareIdx, 8) % 2 === 0) {
+      if (squareIdx % 2 === 0) {
+        return 'bg-teal-100';
+      } else {
+        return 'bg-gray-400';
+      }
+    } else {
+      if (squareIdx % 2 !== 0) {
+        return 'bg-teal-100';
+      } else {
+        return 'bg-gray-400';
+      }
+    }
+  };
 
-
-    return <div className="grid grid-cols-8">
-        {boardState.map((pieceId, idx) => 
-          <div key={idx} className={`h-20 w-20 ${idx%2 === 0 ? 'bg-red-100' : 'bg-black'}`}>{pieceId}</div>
-        )}
+  return (
+    <div className="grid grid-cols-8 gap-0 w-[900px] h-[900px]">
+      {boardState?.map((pieceId, idx) => (
+        <div
+          key={idx}
+          className={`relative flex justify-center items-center w-full h-full ${colorSquare(
+            idx
+          )}`}
+          onClick={() => setSelectedPieceIdx(idx)}
+        >
+          {idx}
+          {highlightedValidMoves.includes(idx) && (
+            <div className="absolute flex justify-center items-center rounded-full bg-gray-600 h-5 w-5"></div>
+          )}
+          <div className="h-20 w-20">
+            {getPieceIcon(
+              pieceId,
+              playerColorBoardState[idx] === 1 ? 'white' : 'black'
+            )}
+          </div>
+        </div>
+      ))}
     </div>
-}
+  );
+};
 
 export default ChessBoard;
