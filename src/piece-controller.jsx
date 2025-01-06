@@ -10,7 +10,7 @@ const PieceController = () => {
     1, 1, 1, 1, 1, 1, 1, 1, // 1 - Pawn
     0, 0, 4, 0, 0, 0, 0, 0, // 2 - Knight
     0, 0, 0, 0, 0, 0, 0, 0, // 3 - Bishop
-    2, 0, 0, 2, 0, 0, 0, 0, // 4 - Rook
+    2, 0, 5, 5, 0, 6, 3, 5, // 4 - Rook
     0, 0, 0, 0, 0, 0, 0, 0, // 5 - Queen
     1, 1, 1, 1, 1, 1, 1, 1, // 6 - King
     4, 2, 3, 5, 6, 3, 2, 4,
@@ -22,7 +22,7 @@ const PieceController = () => {
     2, 2, 2, 2, 2, 2, 2, 2, // 2 - Black
     0, 0, 2, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    2, 0, 0, 2, 0, 0, 0, 0,
+    2, 0, 2, 1, 0, 1, 2, 2,
     0, 0, 0, 0, 0, 0, 0, 0,
     1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1,
@@ -62,9 +62,17 @@ const PieceController = () => {
       case 2: // Knight
         validMoves = getAllValidKnightMoves(pieceIdx);
         break;
+      case 3: // Bishop
+        validMoves = getAllValidBishopMoves(pieceIdx);
+        break;
       case 4: // Rook
         validMoves = getAllValidRookMoves(pieceIdx);
         break;
+      case 5: // Queen
+        validMoves = getAllValidQueenMoves(pieceIdx);
+        break;
+      case 6: // King
+        validMoves = getAllValidKingMoves(pieceIdx);
       default:
         break;
     }
@@ -154,6 +162,35 @@ const PieceController = () => {
     return moves;
   };
 
+  const getAllValidBishopMoves = (pieceIdx) => {
+    const moves = [];
+
+    const directions = [
+      -1 - nBoardRows, // up left
+      -1 + nBoardRows, // down left
+       1 - nBoardRows, // up right
+       1 + nBoardRows, // down right
+    ]
+    directions.forEach(direction => {
+      let currentIdx = pieceIdx + direction;
+      while (isInBounds(currentIdx) && boardState[currentIdx] === 0) {
+        moves.push(currentIdx);
+        currentIdx += direction;
+
+        console.log(currentIdx, currentIdx % nBoardCols)
+        if (currentIdx % nBoardCols === 0) {
+          break;
+        }
+      }
+
+      if (isOpponent(pieceIdx, currentIdx) && currentIdx % nBoardCols !== 0) {
+        moves.push(currentIdx);
+      }
+    });
+    
+    return moves;
+  }
+
   const getAllValidRookMoves = (pieceIdx) => {
     const moves = [];
     const directions = [-nBoardCols, nBoardCols, -1, 1]; // Up, Down, Left, Right
@@ -180,6 +217,29 @@ const PieceController = () => {
 
     return moves;
   };
+
+  const getAllValidQueenMoves = (pieceIdx) => {
+    return [...getAllValidBishopMoves(pieceIdx), ...getAllValidRookMoves(pieceIdx)];
+  }
+
+  const getAllValidKingMoves = (pieceIdx) => {
+    const moves = [];
+    const directions = [
+      -1 - nBoardRows, -nBoardRows, 1 - nBoardRows, // top row
+      -1, 1,                                        // left and right
+      -1 + nBoardRows, nBoardRows, 1 + nBoardRows   // bottom row
+    ]
+    directions.forEach(direction => {
+      const targetIdx = pieceIdx + direction;
+      if (boardState[targetIdx] === 0 || isOpponent(pieceIdx, targetIdx)) {
+        moves.push(targetIdx);
+      }
+    });
+
+    // TODO: Handle blocking illegal moves that put king in "check"
+
+    return moves;
+  }
 
   const isInBounds = (index) => index >= 0 && index < 64;
 

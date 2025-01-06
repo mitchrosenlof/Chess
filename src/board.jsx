@@ -38,7 +38,7 @@ const ChessBoard = () => {
           onClick={() => setSelectedPieceIdx(idx)}
         >
           {idx}
-          {highlightedValidMoves.includes(idx) && (
+          {highlightedValidMoves?.includes(idx) && (
             <div className="absolute flex justify-center items-center rounded-full bg-gray-600 h-5 w-5"></div>
           )}
           <div className="h-20 w-20">
