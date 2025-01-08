@@ -8,9 +8,9 @@ const PieceController = () => {
   const [boardState, setBoardState] = useState([
     4, 2, 3, 5, 6, 3, 2, 4, // 0 - empty
     1, 1, 1, 1, 1, 1, 1, 1, // 1 - Pawn
-    0, 0, 4, 0, 0, 0, 0, 0, // 2 - Knight
+    0, 0, 0, 0, 0, 0, 0, 0, // 2 - Knight
     0, 0, 0, 0, 0, 0, 0, 0, // 3 - Bishop
-    2, 0, 5, 5, 0, 6, 3, 5, // 4 - Rook
+    0, 0, 0, 0, 0, 0, 0, 0, // 4 - Rook
     0, 0, 0, 0, 0, 0, 0, 0, // 5 - Queen
     1, 1, 1, 1, 1, 1, 1, 1, // 6 - King
     4, 2, 3, 5, 6, 3, 2, 4,
@@ -20,36 +20,22 @@ const PieceController = () => {
   const [playerColorBoardState, setPlayerColorBoardState] = useState([
     2, 2, 2, 2, 2, 2, 2, 2, // 1 - white
     2, 2, 2, 2, 2, 2, 2, 2, // 2 - Black
-    0, 0, 2, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    2, 0, 2, 1, 0, 1, 2, 2,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1,
   ]);
+  const [playerTurn, setPlayerTurn] = useState(1);
   // states for clicking and moving pieces
   const [selectedPieceIdx, setSelectedPieceIdx] = useState(null);
   const [highlightedValidMoves, setHighlightedValidMoves] = useState([]);
 
   useEffect(() => {
-    if (selectedPieceIdx !== null) {
-      const moves = getValidMoves(selectedPieceIdx);
-      console.log(moves);
-      setHighlightedValidMoves(moves);
-    } else {
-      setHighlightedValidMoves([]);
-    }
+    const moves = getValidMoves(selectedPieceIdx);
+    setHighlightedValidMoves(moves);
   }, [selectedPieceIdx]);
-
-  // const onClickPiece = (idx) => {
-  //   // highlight piece and legal moves
-  //   setSelectedPieceIdx(idx);
-  //   // determine kind of piece
-  //   const pieceId = boardState[idx];
-  //   // determine valid moves
-  //   const validMoves = getValidMoves(boardState, idx);
-  //   // set clicked piece state
-  // };
 
   const getValidMoves = (pieceIdx) => {
     const piece = boardState[pieceIdx];
@@ -177,7 +163,6 @@ const PieceController = () => {
         moves.push(currentIdx);
         currentIdx += direction;
 
-        console.log(currentIdx, currentIdx % nBoardCols)
         if (currentIdx % nBoardCols === 0) {
           break;
         }
@@ -219,7 +204,7 @@ const PieceController = () => {
   };
 
   const getAllValidQueenMoves = (pieceIdx) => {
-    return [...getAllValidBishopMoves(pieceIdx), ...getAllValidRookMoves(pieceIdx)];
+    return getAllValidBishopMoves(pieceIdx).concat(getAllValidRookMoves(pieceIdx));
   }
 
   const getAllValidKingMoves = (pieceIdx) => {
@@ -250,12 +235,45 @@ const PieceController = () => {
     );
   };
 
+  const handleClickSquare = (clickedBoardIdx) => {
+    if (playerTurn === playerColorBoardState[clickedBoardIdx]) {
+      setSelectedPieceIdx(clickedBoardIdx);
+    } else if (highlightedValidMoves.includes(clickedBoardIdx)) {
+      // move the piece
+      setBoardState(prev => {
+        const piece = prev[selectedPieceIdx];
+
+        const newBoard = [...prev];
+        
+        // valid move logic lives in piece selection function
+        newBoard[clickedBoardIdx] = piece;
+        newBoard[selectedPieceIdx] = 0;
+
+        // update player color array
+        setPlayerColorBoardState(prev => {
+          const pieceColor = prev[selectedPieceIdx];
+
+          const newColorState = [...prev];
+          newColorState[clickedBoardIdx] = pieceColor;
+          newColorState[selectedPieceIdx] = 0;
+          return newColorState;
+        });
+
+        return newBoard;
+      });
+
+      // update visuals and change turns
+      setSelectedPieceIdx(null);
+      setPlayerTurn(prev => prev === 1 ? 2 : 1);
+    }
+  }
+
   return {
     boardState,
     playerColorBoardState,
     selectedPieceIdx,
-    setSelectedPieceIdx,
     highlightedValidMoves,
+    handleClickSquare,
   };
 };
 
