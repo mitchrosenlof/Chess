@@ -7,6 +7,7 @@ const ChessBoard = () => {
   const {
     boardState,
     playerColorBoardState,
+    selectedPieceIdx,
     setSelectedPieceIdx,
     highlightedValidMoves,
   } = PieceController();
@@ -35,12 +36,13 @@ const ChessBoard = () => {
           className={`relative flex justify-center items-center w-full h-full ${colorSquare(
             idx
           )}`}
-          onClick={() => setSelectedPieceIdx(idx)}
+          onClick={() => boardState[idx] !== 0 && setSelectedPieceIdx(idx)}
         >
           {idx}
           {highlightedValidMoves?.includes(idx) && (
             <div className="absolute flex justify-center items-center rounded-full bg-gray-600 h-5 w-5"></div>
           )}
+          {selectedPieceIdx === idx && <div className="absolute w-full h-full opacity-40 bg-red-400"></div>}
           <div className="h-20 w-20">
             {getPieceIcon(
               pieceId,
