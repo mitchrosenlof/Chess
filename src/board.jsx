@@ -6,7 +6,7 @@ import PieceController from './piece-controller';
 const ChessBoard = () => {
   const {
     boardState,
-    playerColorBoardState,
+    playerBoardState,
     selectedPieceIdx,
     handleClickSquare,
     highlightedValidMoves,
@@ -46,7 +46,7 @@ const ChessBoard = () => {
           <div className="h-20 w-20">
             {getPieceIcon(
               pieceId,
-              playerColorBoardState[idx] === 1 ? 'white' : 'black'
+              playerBoardState[idx]
             )}
           </div>
         </div>

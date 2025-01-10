@@ -1,87 +1,156 @@
 import React, { useState, useEffect } from 'react';
-import { nBoardCols, nBoardRows } from './constants';
+import {
+  PAWN,
+  KNIGHT,
+  BISHOP,
+  ROOK,
+  QUEEN,
+  KING,
+  nBoardCols,
+  nBoardRows,
+} from './constants';
 import { getRowIdx, getColIdx } from './utils';
 
 const PieceController = () => {
-  // state of the location of the pieces of the board
+  // State of the location of the pieces of the board.
   // prettier-ignore
   const [boardState, setBoardState] = useState([
     4, 2, 3, 5, 6, 3, 2, 4, // 0 - empty
     1, 1, 1, 1, 1, 1, 1, 1, // 1 - Pawn
     0, 0, 0, 0, 0, 0, 0, 0, // 2 - Knight
     0, 0, 0, 0, 0, 0, 0, 0, // 3 - Bishop
-    0, 0, 0, 0, 0, 0, 0, 0, // 4 - Rook
+    4, 0, 0, 0, 1, 6, 0, 0, // 4 - Rook
     0, 0, 0, 0, 0, 0, 0, 0, // 5 - Queen
     1, 1, 1, 1, 1, 1, 1, 1, // 6 - King
     4, 2, 3, 5, 6, 3, 2, 4,
   ]);
   // state of which player owns which pieces
   // prettier-ignore
-  const [playerColorBoardState, setPlayerColorBoardState] = useState([
+  const [playerBoardState, setPlayerBoardState] = useState([
     2, 2, 2, 2, 2, 2, 2, 2, // 1 - white
     2, 2, 2, 2, 2, 2, 2, 2, // 2 - Black
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
+    2, 0, 0, 0, 1, 1, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1,
   ]);
+
   const [playerTurn, setPlayerTurn] = useState(1);
   // states for clicking and moving pieces
   const [selectedPieceIdx, setSelectedPieceIdx] = useState(null);
   const [highlightedValidMoves, setHighlightedValidMoves] = useState([]);
 
   useEffect(() => {
-    const moves = getValidMoves(selectedPieceIdx);
-    setHighlightedValidMoves(moves);
+    if (selectedPieceIdx !== null) {
+      const moves = getValidMoves(selectedPieceIdx);
+      setHighlightedValidMoves(moves);
+    }
   }, [selectedPieceIdx]);
+
+  const isKingInCheck = (player, boardState, playerState) => {
+    const kingIdx = boardState.findIndex(
+      (piece, idx) => piece === KING && playerBoardState[idx] === player
+    );
+
+    if (kingIdx === -1) {
+      throw new Error('King not found for the specified player.');
+    }
+
+    const diagonalKingAttackerIdxs = getAllValidBishopMoves(
+      kingIdx,
+      boardState,
+      playerState
+    );
+    const vertAndHorizKingAttackerIdxs = getAllValidRookMoves(
+      kingIdx,
+      boardState,
+      playerState
+    );
+    for (let i = 0; i < boardState.length; i++) {
+      const piece = boardState[i];
+      if (
+        diagonalKingAttackerIdxs.includes(i) &&
+        (piece === BISHOP || piece === QUEEN)
+      ) {
+        return true;
+      }
+
+      if (
+        vertAndHorizKingAttackerIdxs.includes(i) &&
+        (piece === ROOK || piece === QUEEN)
+      ) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const filterValidMoves = (pieceIdx, moves, player) => {
+    const filteredMoves = moves.filter((move) => {
+      const newBoardState = [...boardState];
+      const newPlayerBoardState = [...playerBoardState];
+
+      newBoardState[move] = boardState[pieceIdx];
+      newPlayerBoardState[move] = playerBoardState[pieceIdx];
+      newBoardState[pieceIdx] = 0;
+      newPlayerBoardState[pieceIdx] = 0;
+
+      return !isKingInCheck(player, newBoardState, newPlayerBoardState);
+    });
+
+    return filteredMoves;
+  };
 
   const getValidMoves = (pieceIdx) => {
     const piece = boardState[pieceIdx];
-    let validMoves = [];
+    let moves = [];
 
     switch (piece) {
-      case 1: // Pawn
-        validMoves = getAllValidPawnMoves(pieceIdx);
+      case PAWN:
+        moves = getAllValidPawnMoves(pieceIdx, boardState, playerBoardState);
         break;
-      case 2: // Knight
-        validMoves = getAllValidKnightMoves(pieceIdx);
+      case KNIGHT:
+        moves = getAllValidKnightMoves(pieceIdx, boardState, playerBoardState);
         break;
-      case 3: // Bishop
-        validMoves = getAllValidBishopMoves(pieceIdx);
+      case BISHOP:
+        moves = getAllValidBishopMoves(pieceIdx, boardState, playerBoardState);
         break;
-      case 4: // Rook
-        validMoves = getAllValidRookMoves(pieceIdx);
+      case ROOK:
+        moves = getAllValidRookMoves(pieceIdx, boardState, playerBoardState);
         break;
-      case 5: // Queen
-        validMoves = getAllValidQueenMoves(pieceIdx);
+      case QUEEN:
+        moves = getAllValidQueenMoves(pieceIdx, boardState, playerBoardState);
         break;
-      case 6: // King
-        validMoves = getAllValidKingMoves(pieceIdx);
+      case KING:
+        moves = getAllValidKingMoves(pieceIdx, boardState, playerBoardState);
       default:
+        console.error(
+          `Unrecognized piece '${piece}' when getting valid moves.`
+        );
         break;
     }
 
-    return validMoves;
+    return filterValidMoves(pieceIdx, moves, playerTurn);
   };
 
-  const getAllValidPawnMoves = (pieceIdx) => {
+  const getAllValidPawnMoves = (pieceIdx, board, playerBoard) => {
     const row = getRowIdx(pieceIdx, nBoardCols);
     const col = getColIdx(pieceIdx, nBoardCols);
     const moves = [];
-    const direction = playerColorBoardState[pieceIdx] === 1 ? -1 : 1;
+    const direction = playerBoardState[pieceIdx] === 1 ? -1 : 1;
 
     // Move one square forward if empty
     const oneStepForward = pieceIdx + nBoardCols * direction;
-    if (boardState[oneStepForward] === 0) {
+    if (board[oneStepForward] === 0) {
       moves.push(oneStepForward);
 
       // On starting row, move two squares forward if both are empty
       const startingRow = direction === -1 ? 6 : 1;
       if (row === startingRow) {
         const twoStepsForward = pieceIdx + nBoardCols * direction * 2;
-        if (boardState[twoStepsForward] === 0) {
+        if (board[twoStepsForward] === 0) {
           moves.push(twoStepsForward);
         }
       }
@@ -92,14 +161,14 @@ const PieceController = () => {
     const diagonalRight = oneStepForward + 1;
     if (
       col > 0 &&
-      boardState[diagonalLeft] !== 0 &&
-      isOpponent(pieceIdx, diagonalLeft)
+      board[diagonalLeft] !== 0 &&
+      isOpponent(pieceIdx, diagonalLeft, playerBoard)
     ) {
       moves.push(diagonalLeft);
     }
     if (
       col < nBoardCols - 1 &&
-      boardState[diagonalRight] !== 0 &&
+      board[diagonalRight] !== 0 &&
       isOpponent(pieceIdx, diagonalRight)
     ) {
       moves.push(diagonalRight);
@@ -108,58 +177,90 @@ const PieceController = () => {
     return moves;
   };
 
-  const getAllValidKnightMoves = (pieceIdx) => {
+  const getAllValidKnightMoves = (pieceIdx, board, playerBoard) => {
     const moves = [];
 
     const pieceRowIdx = getRowIdx(pieceIdx);
 
     const upLeft = pieceIdx - 2 * nBoardRows - 1;
-    if (isInBounds(upLeft) && getRowIdx(upLeft) === pieceRowIdx - 2) {
+    if (
+      isInBounds(upLeft) &&
+      getRowIdx(upLeft) === pieceRowIdx - 2 &&
+      (isOpponent(upLeft, playerBoard) || board[upLeft] === 0)
+    ) {
       moves.push(upLeft);
     }
     const upRight = pieceIdx - 2 * nBoardRows + 1;
-    if (isInBounds(upRight) && getRowIdx(upRight) === pieceRowIdx - 2) {
+    if (
+      isInBounds(upRight) &&
+      getRowIdx(upRight) === pieceRowIdx - 2 &&
+      (isOpponent(upRight, playerBoard) || board[upRight] === 0)
+    ) {
       moves.push(upRight);
     }
     const leftUp = pieceIdx - 2 - nBoardRows;
-    if (isInBounds(leftUp) && getRowIdx(leftUp) === pieceRowIdx - 1) {
+    if (
+      isInBounds(leftUp) &&
+      getRowIdx(leftUp) === pieceRowIdx - 1 &&
+      (isOpponent(leftUp, playerBoard) || board[leftUp] === 0)
+    ) {
       moves.push(leftUp);
     }
     const leftDown = pieceIdx - 2 + nBoardRows;
-    if (isInBounds(leftDown) && getRowIdx(leftDown) === pieceRowIdx + 1) {
+    if (
+      isInBounds(leftDown) &&
+      getRowIdx(leftDown) === pieceRowIdx + 1 &&
+      (isOpponent(leftDown, playerBoard) || board[leftDown] === 0)
+    ) {
       moves.push(leftDown);
     }
     const downLeft = pieceIdx + 2 * nBoardRows - 1;
-    if (isInBounds(downLeft) && getRowIdx(downLeft) === pieceRowIdx + 2) {
+    if (
+      isInBounds(downLeft) &&
+      getRowIdx(downLeft) === pieceRowIdx + 2 &&
+      (isOpponent(downLeft, playerBoard) || board[downLeft] === 0)
+    ) {
       moves.push(downLeft);
     }
     const downRight = pieceIdx + 2 * nBoardRows + 1;
-    if (isInBounds(downRight) && getRowIdx(downRight) === pieceRowIdx + 2) {
+    if (
+      isInBounds(downRight) &&
+      getRowIdx(downRight) === pieceRowIdx + 2 &&
+      (isOpponent(downRight, playerBoard) || board[downRight] === 0)
+    ) {
       moves.push(downRight);
     }
     const rightUp = pieceIdx + 2 - nBoardRows;
-    if (isInBounds(rightUp) && getRowIdx(rightUp) === pieceRowIdx - 1) {
+    if (
+      isInBounds(rightUp) &&
+      getRowIdx(rightUp) === pieceRowIdx - 1 &&
+      (isOpponent(rightUp, playerBoard) || board[rightUp] === 0)
+    ) {
       moves.push(rightUp);
     }
     const rightDown = pieceIdx + 2 + nBoardRows;
-    if (isInBounds(rightDown) && getRowIdx(rightDown) === pieceRowIdx + 1) {
+    if (
+      isInBounds(rightDown) &&
+      getRowIdx(rightDown) === pieceRowIdx + 1 &&
+      (isOpponent(rightDown, playerBoard) || board[rightDown] === 0)
+    ) {
       moves.push(rightDown);
     }
     return moves;
   };
 
-  const getAllValidBishopMoves = (pieceIdx) => {
+  const getAllValidBishopMoves = (pieceIdx, board, playerBoard) => {
     const moves = [];
 
     const directions = [
       -1 - nBoardRows, // up left
       -1 + nBoardRows, // down left
-       1 - nBoardRows, // up right
-       1 + nBoardRows, // down right
-    ]
-    directions.forEach(direction => {
+      1 - nBoardRows, // up right
+      1 + nBoardRows, // down right
+    ];
+    directions.forEach((direction) => {
       let currentIdx = pieceIdx + direction;
-      while (isInBounds(currentIdx) && boardState[currentIdx] === 0) {
+      while (board[currentIdx] === 0) {
         moves.push(currentIdx);
         currentIdx += direction;
 
@@ -168,22 +269,26 @@ const PieceController = () => {
         }
       }
 
-      if (isOpponent(pieceIdx, currentIdx) && currentIdx % nBoardCols !== 0) {
+      if (
+        isInBounds(currentIdx) &&
+        isOpponent(pieceIdx, currentIdx, playerBoard) &&
+        currentIdx % nBoardCols !== 0
+      ) {
         moves.push(currentIdx);
       }
     });
-    
-    return moves;
-  }
 
-  const getAllValidRookMoves = (pieceIdx) => {
+    return moves;
+  };
+
+  const getAllValidRookMoves = (pieceIdx, board, playerBoard) => {
     const moves = [];
     const directions = [-nBoardCols, nBoardCols, -1, 1]; // Up, Down, Left, Right
     const pieceRowIdx = getRowIdx(pieceIdx);
 
     directions.forEach((direction) => {
       let currentIdx = pieceIdx + direction;
-      while (isInBounds(currentIdx) && boardState[currentIdx] === 0) {
+      while (isInBounds(currentIdx) && board[currentIdx] === 0) {
         if (
           (direction === -1 || direction === 1) &&
           pieceRowIdx !== getRowIdx(currentIdx)
@@ -195,7 +300,10 @@ const PieceController = () => {
         currentIdx += direction;
       }
 
-      if (isOpponent(pieceIdx, currentIdx)) {
+      if (
+        isInBounds(currentIdx) &&
+        isOpponent(pieceIdx, currentIdx, playerBoard)
+      ) {
         moves.push(currentIdx);
       }
     });
@@ -203,20 +311,30 @@ const PieceController = () => {
     return moves;
   };
 
-  const getAllValidQueenMoves = (pieceIdx) => {
-    return getAllValidBishopMoves(pieceIdx).concat(getAllValidRookMoves(pieceIdx));
-  }
+  const getAllValidQueenMoves = (pieceIdx, board, playerBoard) => {
+    return getAllValidBishopMoves(pieceIdx, board, playerBoard).concat(
+      getAllValidRookMoves(pieceIdx, board, playerBoard)
+    );
+  };
 
-  const getAllValidKingMoves = (pieceIdx) => {
+  const getAllValidKingMoves = (pieceIdx, board, playerBoard) => {
     const moves = [];
     const directions = [
-      -1 - nBoardRows, -nBoardRows, 1 - nBoardRows, // top row
-      -1, 1,                                        // left and right
-      -1 + nBoardRows, nBoardRows, 1 + nBoardRows   // bottom row
-    ]
-    directions.forEach(direction => {
+      -1 - nBoardRows, // top row
+      -nBoardRows,
+      1 - nBoardRows,
+      -1, // left and right
+      1,
+      -1 + nBoardRows,
+      nBoardRows,
+      1 + nBoardRows, // bottom row
+    ];
+    directions.forEach((direction) => {
       const targetIdx = pieceIdx + direction;
-      if (boardState[targetIdx] === 0 || isOpponent(pieceIdx, targetIdx)) {
+      if (
+        board[targetIdx] === 0 ||
+        isOpponent(pieceIdx, targetIdx, playerBoard)
+      ) {
         moves.push(targetIdx);
       }
     });
@@ -224,53 +342,50 @@ const PieceController = () => {
     // TODO: Handle blocking illegal moves that put king in "check"
 
     return moves;
-  }
+  };
 
   const isInBounds = (index) => index >= 0 && index < 64;
 
-  const isOpponent = (pieceIdx, targetIdx) => {
+  const isOpponent = (pieceIdx, targetIdx, playerBoard) => {
     return (
-      playerColorBoardState[targetIdx] !== 0 &&
-      playerColorBoardState[pieceIdx] !== playerColorBoardState[targetIdx]
+      playerBoard[targetIdx] !== 0 &&
+      playerBoard[pieceIdx] !== playerBoard[targetIdx]
     );
   };
 
+  const handleUpdateBoardState = (prevBoardState, moveToIdx) => {
+    const piece = prevBoardState[selectedPieceIdx];
+    const newBoard = [...prevBoardState];
+
+    // valid move logic lives in piece selection function
+    newBoard[moveToIdx] = piece;
+    newBoard[selectedPieceIdx] = 0;
+
+    return newBoard;
+  };
+
   const handleClickSquare = (clickedBoardIdx) => {
-    if (playerTurn === playerColorBoardState[clickedBoardIdx]) {
+    if (playerTurn === playerBoardState[clickedBoardIdx]) {
       setSelectedPieceIdx(clickedBoardIdx);
-    } else if (highlightedValidMoves.includes(clickedBoardIdx)) {
+    } else if (highlightedValidMoves?.includes(clickedBoardIdx)) {
       // move the piece
-      setBoardState(prev => {
-        const piece = prev[selectedPieceIdx];
+      setBoardState((prev) => handleUpdateBoardState(prev, clickedBoardIdx));
 
-        const newBoard = [...prev];
-        
-        // valid move logic lives in piece selection function
-        newBoard[clickedBoardIdx] = piece;
-        newBoard[selectedPieceIdx] = 0;
-
-        // update player color array
-        setPlayerColorBoardState(prev => {
-          const pieceColor = prev[selectedPieceIdx];
-
-          const newColorState = [...prev];
-          newColorState[clickedBoardIdx] = pieceColor;
-          newColorState[selectedPieceIdx] = 0;
-          return newColorState;
-        });
-
-        return newBoard;
-      });
+      // update player color array
+      setPlayerBoardState((prev) =>
+        handleUpdateBoardState(prev, clickedBoardIdx)
+      );
 
       // update visuals and change turns
       setSelectedPieceIdx(null);
-      setPlayerTurn(prev => prev === 1 ? 2 : 1);
+      setPlayerTurn((prev) => (prev === 1 ? 2 : 1));
+      setHighlightedValidMoves(null);
     }
-  }
+  };
 
   return {
     boardState,
-    playerColorBoardState,
+    playerBoardState,
     selectedPieceIdx,
     highlightedValidMoves,
     handleClickSquare,
