@@ -58,12 +58,28 @@ const PieceController = () => {
       throw new Error('King not found for the specified player.');
     }
 
+    // Pawn attackers
+    const direction = player === 1 ? -1 : 1;
+    const leftDiag = kingIdx - 1 + nBoardCols * direction;
+    const rightRight = kingIdx + 1 + nBoardCols * direction;
+    if (
+      (board[leftDiag] === PAWN && playerState[leftDiag] !== player) ||
+      (board[rightRight] === PAWN && playerState[rightRight] !== player)
+    ) {
+      return true;
+    }
+
     const diagonalKingAttackCheckIdxs = getAllValidBishopMoves(
       kingIdx,
       board,
       playerState
     );
     const vertAndHorizKingAttackCheckIdxs = getAllValidRookMoves(
+      kingIdx,
+      board,
+      playerState
+    );
+    const knightAttackCheckIdxs = getAllValidKnightMoves(
       kingIdx,
       board,
       playerState
@@ -78,6 +94,12 @@ const PieceController = () => {
     for (let i = 0; i < vertAndHorizKingAttackCheckIdxs.length; i++) {
       const piece = board[vertAndHorizKingAttackCheckIdxs[i]];
       if ((piece === ROOK || piece === QUEEN) && playerState[i] !== player) {
+        return true;
+      }
+    }
+    for (let i = 0; i < knightAttackCheckIdxs.length; i++) {
+      const piece = board[knightAttackCheckIdxs[i]];
+      if (piece === KNIGHT && playerState[i] !== player) {
         return true;
       }
     }
@@ -130,7 +152,7 @@ const PieceController = () => {
         break;
     }
 
-    console.log(moves);
+    // console.log(moves);
 
     return filterPinnedPieceMoves(pieceIdx, moves, playerTurn);
   };
@@ -186,7 +208,7 @@ const PieceController = () => {
     if (
       isInBounds(upLeft) &&
       getRowIdx(upLeft) === pieceRowIdx - 2 &&
-      (isOpponent(upLeft, playerBoard) || board[upLeft] === 0)
+      (isOpponent(pieceIdx, upLeft, playerBoard) || board[upLeft] === 0)
     ) {
       moves.push(upLeft);
     }
@@ -194,7 +216,7 @@ const PieceController = () => {
     if (
       isInBounds(upRight) &&
       getRowIdx(upRight) === pieceRowIdx - 2 &&
-      (isOpponent(upRight, playerBoard) || board[upRight] === 0)
+      (isOpponent(pieceIdx, upRight, playerBoard) || board[upRight] === 0)
     ) {
       moves.push(upRight);
     }
@@ -202,7 +224,7 @@ const PieceController = () => {
     if (
       isInBounds(leftUp) &&
       getRowIdx(leftUp) === pieceRowIdx - 1 &&
-      (isOpponent(leftUp, playerBoard) || board[leftUp] === 0)
+      (isOpponent(pieceIdx, leftUp, playerBoard) || board[leftUp] === 0)
     ) {
       moves.push(leftUp);
     }
@@ -210,7 +232,7 @@ const PieceController = () => {
     if (
       isInBounds(leftDown) &&
       getRowIdx(leftDown) === pieceRowIdx + 1 &&
-      (isOpponent(leftDown, playerBoard) || board[leftDown] === 0)
+      (isOpponent(pieceIdx, leftDown, playerBoard) || board[leftDown] === 0)
     ) {
       moves.push(leftDown);
     }
@@ -218,7 +240,7 @@ const PieceController = () => {
     if (
       isInBounds(downLeft) &&
       getRowIdx(downLeft) === pieceRowIdx + 2 &&
-      (isOpponent(downLeft, playerBoard) || board[downLeft] === 0)
+      (isOpponent(pieceIdx, downLeft, playerBoard) || board[downLeft] === 0)
     ) {
       moves.push(downLeft);
     }
@@ -226,7 +248,7 @@ const PieceController = () => {
     if (
       isInBounds(downRight) &&
       getRowIdx(downRight) === pieceRowIdx + 2 &&
-      (isOpponent(downRight, playerBoard) || board[downRight] === 0)
+      (isOpponent(pieceIdx, downRight, playerBoard) || board[downRight] === 0)
     ) {
       moves.push(downRight);
     }
@@ -234,7 +256,7 @@ const PieceController = () => {
     if (
       isInBounds(rightUp) &&
       getRowIdx(rightUp) === pieceRowIdx - 1 &&
-      (isOpponent(rightUp, playerBoard) || board[rightUp] === 0)
+      (isOpponent(pieceIdx, rightUp, playerBoard) || board[rightUp] === 0)
     ) {
       moves.push(rightUp);
     }
@@ -242,7 +264,7 @@ const PieceController = () => {
     if (
       isInBounds(rightDown) &&
       getRowIdx(rightDown) === pieceRowIdx + 1 &&
-      (isOpponent(rightDown, playerBoard) || board[rightDown] === 0)
+      (isOpponent(pieceIdx, rightDown, playerBoard) || board[rightDown] === 0)
     ) {
       moves.push(rightDown);
     }
