@@ -36,9 +36,7 @@ const PieceController = () => {
     1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1,
   ]);
-
   const [playerTurn, setPlayerTurn] = useState(1);
-  // states for clicking and moving pieces
   const [selectedPieceIdx, setSelectedPieceIdx] = useState(null);
   const [highlightedValidMoves, setHighlightedValidMoves] = useState([]);
 
@@ -362,8 +360,6 @@ const PieceController = () => {
         moves.push(targetIdx);
       }
     });
-
-    // TODO: Handle blocking illegal moves that put king in "check"
 
     return moves;
   };
