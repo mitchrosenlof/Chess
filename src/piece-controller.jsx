@@ -49,45 +49,42 @@ const PieceController = () => {
     }
   }, [selectedPieceIdx]);
 
-  const isKingInCheck = (player, boardState, playerState) => {
-    const kingIdx = boardState.findIndex(
-      (piece, idx) => piece === KING && playerBoardState[idx] === player
+  const isKingInCheck = (player, board, playerState) => {
+    const kingIdx = board.findIndex(
+      (piece, idx) => piece === KING && playerState[idx] === player
     );
 
     if (kingIdx === -1) {
       throw new Error('King not found for the specified player.');
     }
 
-    const diagonalKingAttackerIdxs = getAllValidBishopMoves(
+    const diagonalKingAttackCheckIdxs = getAllValidBishopMoves(
       kingIdx,
-      boardState,
+      board,
       playerState
     );
-    const vertAndHorizKingAttackerIdxs = getAllValidRookMoves(
+    const vertAndHorizKingAttackCheckIdxs = getAllValidRookMoves(
       kingIdx,
-      boardState,
+      board,
       playerState
     );
-    for (let i = 0; i < boardState.length; i++) {
-      const piece = boardState[i];
-      if (
-        diagonalKingAttackerIdxs.includes(i) &&
-        (piece === BISHOP || piece === QUEEN)
-      ) {
+
+    for (let i = 0; i < diagonalKingAttackCheckIdxs.length; i++) {
+      const piece = board[diagonalKingAttackCheckIdxs[i]];
+      if ((piece === BISHOP || piece === QUEEN) && playerState[i] !== player) {
         return true;
       }
-
-      if (
-        vertAndHorizKingAttackerIdxs.includes(i) &&
-        (piece === ROOK || piece === QUEEN)
-      ) {
+    }
+    for (let i = 0; i < vertAndHorizKingAttackCheckIdxs.length; i++) {
+      const piece = board[vertAndHorizKingAttackCheckIdxs[i]];
+      if ((piece === ROOK || piece === QUEEN) && playerState[i] !== player) {
         return true;
       }
     }
     return false;
   };
 
-  const filterValidMoves = (pieceIdx, moves, player) => {
+  const filterPinnedPieceMoves = (pieceIdx, moves, player) => {
     const filteredMoves = moves.filter((move) => {
       const newBoardState = [...boardState];
       const newPlayerBoardState = [...playerBoardState];
@@ -125,6 +122,7 @@ const PieceController = () => {
         break;
       case KING:
         moves = getAllValidKingMoves(pieceIdx, boardState, playerBoardState);
+        break;
       default:
         console.error(
           `Unrecognized piece '${piece}' when getting valid moves.`
@@ -132,7 +130,9 @@ const PieceController = () => {
         break;
     }
 
-    return filterValidMoves(pieceIdx, moves, playerTurn);
+    console.log(moves);
+
+    return filterPinnedPieceMoves(pieceIdx, moves, playerTurn);
   };
 
   const getAllValidPawnMoves = (pieceIdx, board, playerBoard) => {
@@ -169,7 +169,7 @@ const PieceController = () => {
     if (
       col < nBoardCols - 1 &&
       board[diagonalRight] !== 0 &&
-      isOpponent(pieceIdx, diagonalRight)
+      isOpponent(pieceIdx, diagonalRight, playerBoard)
     ) {
       moves.push(diagonalRight);
     }
@@ -302,7 +302,8 @@ const PieceController = () => {
 
       if (
         isInBounds(currentIdx) &&
-        isOpponent(pieceIdx, currentIdx, playerBoard)
+        isOpponent(pieceIdx, currentIdx, playerBoard) &&
+        currentIdx % nBoardCols !== 0
       ) {
         moves.push(currentIdx);
       }
@@ -325,15 +326,16 @@ const PieceController = () => {
       1 - nBoardRows,
       -1, // left and right
       1,
-      -1 + nBoardRows,
+      -1 + nBoardRows, // bottom row
       nBoardRows,
-      1 + nBoardRows, // bottom row
+      1 + nBoardRows,
     ];
+
     directions.forEach((direction) => {
       const targetIdx = pieceIdx + direction;
       if (
-        board[targetIdx] === 0 ||
-        isOpponent(pieceIdx, targetIdx, playerBoard)
+        isInBounds(targetIdx) &&
+        (board[targetIdx] === 0 || isOpponent(pieceIdx, targetIdx, playerBoard))
       ) {
         moves.push(targetIdx);
       }
