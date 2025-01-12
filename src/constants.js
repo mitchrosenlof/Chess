@@ -8,7 +8,7 @@ export const ROOK = 4;
 export const QUEEN = 5;
 export const KING = 6;
 
-export const PIECE_MAP = {
+export const NOTATION_MAP = {
   1: '',
   2: 'N',
   3: 'B',

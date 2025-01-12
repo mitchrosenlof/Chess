@@ -27,4 +27,7 @@ export function getPieceIcon(pieceId, playerColor) {
   }
 }
 
-export function getValidPawnMoves() {}
+export function getDestSquareNotation(rowIdx, colIdx) {
+  const colNames = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  return colNames[colIdx] + `${rowIdx + 1}`;
+}
