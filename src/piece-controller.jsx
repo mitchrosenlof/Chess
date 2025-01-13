@@ -454,40 +454,38 @@ const usePieceController = () => {
         const newBoard = handleUpdateBoardState(prevBoard, clickedBoardIdx);
 
         // update player color array
-        setPlayerBoardState((prevPlayerState) => {
-          const newPlayerState = handleUpdateBoardState(
-            prevPlayerState,
-            clickedBoardIdx
-          );
+        const newPlayerState = handleUpdateBoardState(
+          playerBoardState,
+          clickedBoardIdx
+        );
 
-          // did put opponent in "check"?
-          setIsInCheck(
-            isKingInCheck(playerTurn === 1 ? 2 : 1, newBoard, newPlayerState)
-          );
+        // did put opponent in "check"?
+        setIsInCheck(
+          isKingInCheck(playerTurn === 1 ? 2 : 1, newBoard, newPlayerState)
+        );
 
-          // check if move is a castle
-          if (boardState[selectedPieceIdx] === KING) {
-            if (clickedBoardIdx + 2 === selectedPieceIdx) {
-              // castle left, move corner rook
-              newBoard[selectedPieceIdx - 1] = prevBoard[selectedPieceIdx - 4];
-              newBoard[selectedPieceIdx - 4] = 0;
-              newPlayerState[selectedPieceIdx - 1] =
-                prevPlayerState[selectedPieceIdx - 4];
-              newPlayerState[selectedPieceIdx - 4] = 0;
-            } else if (clickedBoardIdx - 2 === selectedPieceIdx) {
-              // castle right, move corner rook
-              newBoard[selectedPieceIdx + 1] = prevBoard[selectedPieceIdx + 3];
-              newBoard[selectedPieceIdx + 3] = 0;
-              newPlayerState[selectedPieceIdx + 1] =
-                prevPlayerState[selectedPieceIdx + 3];
-              newPlayerState[selectedPieceIdx + 3] = 0;
-            }
-
-            setPlayerCanCastle((prev) => ({ ...prev, [playerTurn]: false }));
+        // check if move is a castle
+        if (boardState[selectedPieceIdx] === KING) {
+          if (clickedBoardIdx + 2 === selectedPieceIdx) {
+            // castle left, move corner rook
+            newBoard[selectedPieceIdx - 1] = prevBoard[selectedPieceIdx - 4];
+            newBoard[selectedPieceIdx - 4] = 0;
+            newPlayerState[selectedPieceIdx - 1] =
+              playerBoardState[selectedPieceIdx - 4];
+            newPlayerState[selectedPieceIdx - 4] = 0;
+          } else if (clickedBoardIdx - 2 === selectedPieceIdx) {
+            // castle right, move corner rook
+            newBoard[selectedPieceIdx + 1] = prevBoard[selectedPieceIdx + 3];
+            newBoard[selectedPieceIdx + 3] = 0;
+            newPlayerState[selectedPieceIdx + 1] =
+              playerBoardState[selectedPieceIdx + 3];
+            newPlayerState[selectedPieceIdx + 3] = 0;
           }
-          return newPlayerState;
-        });
 
+          setPlayerCanCastle((prev) => ({ ...prev, [playerTurn]: false }));
+        }
+
+        setPlayerBoardState(newPlayerState);
         return newBoard;
       });
 
