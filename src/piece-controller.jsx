@@ -8,21 +8,24 @@ import {
   KING,
   nBoardCols,
   nBoardRows,
+  initialBoard,
+  initialPlayerBoard,
 } from './constants';
-import { getRowIdx, getColIdx } from './utils';
+import { getRowIdx, getColIdx } from './board-utils';
+import useMoveManager from './move-manager';
 
-const PieceController = () => {
+const usePieceController = () => {
   // State of the location of the pieces of the board.
   // prettier-ignore
-  const [boardState, setBoardState] = useState([
+  const [boardState, setBoardState] = useState( [
     4, 2, 3, 5, 6, 3, 2, 4, // 0 - empty
     1, 1, 1, 1, 1, 1, 1, 1, // 1 - Pawn
     0, 0, 0, 0, 0, 0, 0, 0, // 2 - Knight
     0, 0, 0, 0, 0, 0, 0, 0, // 3 - Bishop
-    4, 0, 0, 0, 1, 6, 0, 0, // 4 - Rook
+    0, 0, 0, 0, 0, 0, 0, 0, // 4 - Rook
     0, 0, 0, 0, 0, 0, 0, 0, // 5 - Queen
     1, 1, 1, 1, 1, 1, 1, 1, // 6 - King
-    4, 2, 3, 5, 6, 3, 2, 4,
+    4, 0, 0, 0, 6, 0, 0, 4,
   ]);
   // state of which player owns which pieces
   // prettier-ignore
@@ -31,14 +34,20 @@ const PieceController = () => {
     2, 2, 2, 2, 2, 2, 2, 2, // 2 - Black
     0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
-    2, 0, 0, 0, 1, 1, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0,
     1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 1, 1, 1, 1,
+    1, 0, 0, 0, 1, 0, 0, 1,
   ]);
   const [playerTurn, setPlayerTurn] = useState(1);
   const [selectedPieceIdx, setSelectedPieceIdx] = useState(null);
   const [highlightedValidMoves, setHighlightedValidMoves] = useState([]);
+  const [playerCanCastle, setPlayerCanCastle] = useState({
+    1: true,
+    2: true,
+  });
+
+  const { isInCheck, setIsInCheck } = useMoveManager();
 
   useEffect(() => {
     if (selectedPieceIdx !== null) {
@@ -361,6 +370,54 @@ const PieceController = () => {
       }
     });
 
+    // castle
+
+    if (playerCanCastle[playerTurn]) {
+      // left
+      let canLeftCastle = true;
+      for (let offset = 1; offset < 4; offset++) {
+        const currentIdx = pieceIdx - offset;
+        if (board[currentIdx] === 0) {
+          const newBoard = [...board];
+          const newPlayerBoard = [...playerBoard];
+
+          newBoard[currentIdx] = board[pieceIdx];
+          newBoard[pieceIdx] = 0;
+          newPlayerBoard[currentIdx] = playerBoard[pieceIdx];
+          newPlayerBoard[pieceIdx] = 0;
+
+          if (isKingInCheck(playerTurn, newBoard, newPlayerBoard)) {
+            canLeftCastle = false;
+          }
+        } else {
+          canLeftCastle = false;
+        }
+      }
+      // right
+      let canRightCastle = true;
+      for (let offset = 1; offset < 3; offset++) {
+        const currentIdx = pieceIdx + offset;
+        if (board[currentIdx] === 0) {
+          const newBoard = [...board];
+          const newPlayerBoard = [...playerBoard];
+
+          newBoard[currentIdx] = board[pieceIdx];
+          newBoard[pieceIdx] = 0;
+          newPlayerBoard[currentIdx] = playerBoard[pieceIdx];
+          newPlayerBoard[pieceIdx] = 0;
+
+          if (isKingInCheck(playerTurn, newBoard, newPlayerBoard)) {
+            canRightCastle = false;
+          }
+        } else {
+          canRightCastle = false;
+        }
+      }
+
+      if (canLeftCastle) moves.push(pieceIdx - 2);
+      if (canRightCastle) moves.push(pieceIdx + 2);
+    }
+
     return moves;
   };
 
@@ -377,7 +434,7 @@ const PieceController = () => {
     const piece = prevBoardState[selectedPieceIdx];
     const newBoard = [...prevBoardState];
 
-    // valid move logic lives in piece selection function
+    /* Valid move logic lives in piece selection function */
     newBoard[moveToIdx] = piece;
     newBoard[selectedPieceIdx] = 0;
 
@@ -385,18 +442,56 @@ const PieceController = () => {
   };
 
   const handleClickSquare = (clickedBoardIdx) => {
+    const piece = boardState[clickedBoardIdx];
     if (playerTurn === playerBoardState[clickedBoardIdx]) {
+      if (isInCheck && piece !== KING) {
+        return;
+      }
       setSelectedPieceIdx(clickedBoardIdx);
     } else if (highlightedValidMoves?.includes(clickedBoardIdx)) {
       // move the piece
-      setBoardState((prev) => handleUpdateBoardState(prev, clickedBoardIdx));
+      setBoardState((prevBoard) => {
+        const newBoard = handleUpdateBoardState(prevBoard, clickedBoardIdx);
 
-      // update player color array
-      setPlayerBoardState((prev) =>
-        handleUpdateBoardState(prev, clickedBoardIdx)
-      );
+        // update player color array
+        setPlayerBoardState((prevPlayerState) => {
+          const newPlayerState = handleUpdateBoardState(
+            prevPlayerState,
+            clickedBoardIdx
+          );
 
-      // update visuals and change turns
+          // did put opponent in "check"?
+          setIsInCheck(
+            isKingInCheck(playerTurn === 1 ? 2 : 1, newBoard, newPlayerState)
+          );
+
+          // check if move is a castle
+          if (boardState[selectedPieceIdx] === KING) {
+            if (clickedBoardIdx + 2 === selectedPieceIdx) {
+              // castle left, move corner rook
+              newBoard[selectedPieceIdx - 1] = prevBoard[selectedPieceIdx - 4];
+              newBoard[selectedPieceIdx - 4] = 0;
+              newPlayerState[selectedPieceIdx - 1] =
+                prevPlayerState[selectedPieceIdx - 4];
+              newPlayerState[selectedPieceIdx - 4] = 0;
+            } else if (clickedBoardIdx - 2 === selectedPieceIdx) {
+              // castle right, move corner rook
+              newBoard[selectedPieceIdx + 1] = prevBoard[selectedPieceIdx + 3];
+              newBoard[selectedPieceIdx + 3] = 0;
+              newPlayerState[selectedPieceIdx + 1] =
+                prevPlayerState[selectedPieceIdx + 3];
+              newPlayerState[selectedPieceIdx + 3] = 0;
+            }
+
+            setPlayerCanCastle((prev) => ({ ...prev, [playerTurn]: false }));
+          }
+          return newPlayerState;
+        });
+
+        return newBoard;
+      });
+
+      // clear visuals and change turns
       setSelectedPieceIdx(null);
       setPlayerTurn((prev) => (prev === 1 ? 2 : 1));
       setHighlightedValidMoves(null);
@@ -412,4 +507,4 @@ const PieceController = () => {
   };
 };
 
-export default PieceController;
+export default usePieceController;

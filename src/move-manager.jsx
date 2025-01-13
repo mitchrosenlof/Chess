@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NOTATION_MAP } from './constants';
 import { getColIdx, getDestSquareNotation, getRowIdx } from './board-utils';
 
-const MoveManager = (boardState) => {
+const useMoveManager = (boardState, playerState) => {
   const [moveHistory, setMoveHistory] = useState([]);
+  const [isInCheck, setIsInCheck] = useState(false);
 
   const logMove = (pieceIdx, destIdx) => {
     const pieceKind = NOTATION_MAP[boardState[pieceIdx]];
@@ -12,5 +13,10 @@ const MoveManager = (boardState) => {
       getColIdx(destIdx)
     );
   };
-  return {};
+  return {
+    isInCheck,
+    setIsInCheck,
+  };
 };
+
+export default useMoveManager;

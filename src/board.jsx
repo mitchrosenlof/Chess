@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { getRowIdx } from './utils';
-import { getPieceIcon } from './board-utils';
-import PieceController from './piece-controller';
+import React from 'react';
+import { getPieceIcon, getRowIdx } from './board-utils';
+import usePieceController from './piece-controller';
 
 const ChessBoard = () => {
   const {
@@ -10,7 +9,7 @@ const ChessBoard = () => {
     selectedPieceIdx,
     handleClickSquare,
     highlightedValidMoves,
-  } = PieceController();
+  } = usePieceController();
   const colorSquare = (squareIdx) => {
     // Returns tailwind styles for how the square should currently look
     if (getRowIdx(squareIdx, 8) % 2 === 0) {
@@ -42,12 +41,11 @@ const ChessBoard = () => {
           {highlightedValidMoves?.includes(idx) && (
             <div className="absolute flex justify-center items-center rounded-full bg-gray-600 h-5 w-5"></div>
           )}
-          {selectedPieceIdx === idx && <div className="absolute w-full h-full opacity-40 bg-red-400"></div>}
+          {selectedPieceIdx === idx && (
+            <div className="absolute w-full h-full opacity-40 bg-red-400"></div>
+          )}
           <div className="h-20 w-20">
-            {getPieceIcon(
-              pieceId,
-              playerBoardState[idx]
-            )}
+            {getPieceIcon(pieceId, playerBoardState[idx])}
           </div>
         </div>
       ))}
