@@ -1,6 +1,7 @@
 import React from 'react';
 import { getPieceIcon, getRowIdx } from './board-utils';
 import usePieceController from './piece-controller';
+import PromotionDropdown from './promotion-dropdown';
 
 const ChessBoard = () => {
   const {
@@ -9,6 +10,9 @@ const ChessBoard = () => {
     selectedPieceIdx,
     handleClickSquare,
     highlightedValidMoves,
+    isPromoting,
+    onSelectPromotion,
+    playerTurn,
   } = usePieceController();
   const colorSquare = (squareIdx) => {
     // Returns tailwind styles for how the square should currently look
@@ -28,27 +32,32 @@ const ChessBoard = () => {
   };
 
   return (
-    <div className="grid grid-cols-8 gap-0 w-[900px] h-[900px]">
-      {boardState?.map((pieceId, idx) => (
-        <div
-          key={idx}
-          className={`relative flex justify-center items-center w-full h-full ${colorSquare(
-            idx
-          )}`}
-          onClick={() => handleClickSquare(idx)}
-        >
-          {idx}
-          {highlightedValidMoves?.includes(idx) && (
-            <div className="absolute flex justify-center items-center rounded-full bg-gray-600 h-5 w-5"></div>
-          )}
-          {selectedPieceIdx === idx && (
-            <div className="absolute w-full h-full opacity-40 bg-red-400"></div>
-          )}
-          <div className="h-20 w-20">
-            {getPieceIcon(pieceId, playerBoardState[idx])}
+    <div className="flex">
+      <div className="grid grid-cols-8 gap-0 w-[900px] h-[900px]">
+        {boardState?.map((pieceId, idx) => (
+          <div
+            key={idx}
+            className={`relative flex justify-center items-center w-full h-full ${colorSquare(
+              idx
+            )}`}
+            onClick={() => handleClickSquare(idx)}
+          >
+            {idx}
+            {highlightedValidMoves?.includes(idx) && (
+              <div className="absolute flex justify-center items-center rounded-full bg-gray-600 h-5 w-5"></div>
+            )}
+            {selectedPieceIdx === idx && (
+              <div className="absolute w-full h-full opacity-40 bg-red-400"></div>
+            )}
+            <div className="h-20 w-20">
+              {getPieceIcon(pieceId, playerBoardState[idx])}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
+      {isPromoting && (
+        <PromotionDropdown onSelect={onSelectPromotion} player={playerTurn} />
+      )}
     </div>
   );
 };

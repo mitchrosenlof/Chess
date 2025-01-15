@@ -46,6 +46,7 @@ const usePieceController = () => {
     1: true,
     2: true,
   });
+  const [promoteIdx, setPromoteIdx] = useState(null);
 
   const { isInCheck, setIsInCheck } = useMoveManager();
 
@@ -94,26 +95,35 @@ const usePieceController = () => {
 
     for (let i = 0; i < diagonalKingAttackCheckIdxs.length; i++) {
       const piece = board[diagonalKingAttackCheckIdxs[i]];
-      if ((piece === BISHOP || piece === QUEEN) && playerState[i] !== player) {
+      if (
+        (piece === BISHOP || piece === QUEEN) &&
+        playerState[diagonalKingAttackCheckIdxs[i]] !== player
+      ) {
         return true;
       }
     }
     for (let i = 0; i < vertAndHorizKingAttackCheckIdxs.length; i++) {
       const piece = board[vertAndHorizKingAttackCheckIdxs[i]];
-      if ((piece === ROOK || piece === QUEEN) && playerState[i] !== player) {
+      if (
+        (piece === ROOK || piece === QUEEN) &&
+        playerState[vertAndHorizKingAttackCheckIdxs[i]] !== player
+      ) {
         return true;
       }
     }
     for (let i = 0; i < knightAttackCheckIdxs.length; i++) {
       const piece = board[knightAttackCheckIdxs[i]];
-      if (piece === KNIGHT && playerState[i] !== player) {
+      if (
+        piece === KNIGHT &&
+        playerState[knightAttackCheckIdxs[i]] !== player
+      ) {
         return true;
       }
     }
     return false;
   };
 
-  const filterPinnedPieceMoves = (pieceIdx, moves, player) => {
+  const filterIllegalMoves = (pieceIdx, moves, player) => {
     const filteredMoves = moves.filter((move) => {
       const newBoardState = [...boardState];
       const newPlayerBoardState = [...playerBoardState];
@@ -161,7 +171,7 @@ const usePieceController = () => {
 
     // console.log(moves);
 
-    return filterPinnedPieceMoves(pieceIdx, moves, playerTurn);
+    return filterIllegalMoves(pieceIdx, moves, playerTurn);
   };
 
   const getAllValidPawnMoves = (pieceIdx, board, playerBoard) => {
@@ -371,7 +381,6 @@ const usePieceController = () => {
     });
 
     // castle
-
     if (playerCanCastle[playerTurn]) {
       // left
       let canLeftCastle = true;
@@ -449,6 +458,16 @@ const usePieceController = () => {
       }
       setSelectedPieceIdx(clickedBoardIdx);
     } else if (highlightedValidMoves?.includes(clickedBoardIdx)) {
+      // pawn promotion?
+      const rowIdx = getRowIdx(clickedBoardIdx);
+      if (
+        boardState[selectedPieceIdx] === PAWN &&
+        (rowIdx === 0 || rowIdx === 7)
+      ) {
+        setPromoteIdx(clickedBoardIdx);
+        return;
+      }
+
       // move the piece
       setBoardState((prevBoard) => {
         const newBoard = handleUpdateBoardState(prevBoard, clickedBoardIdx);
@@ -489,11 +508,38 @@ const usePieceController = () => {
         return newBoard;
       });
 
-      // clear visuals and change turns
-      setSelectedPieceIdx(null);
-      setPlayerTurn((prev) => (prev === 1 ? 2 : 1));
-      setHighlightedValidMoves(null);
+      completeTurn();
     }
+  };
+
+  const completeTurn = () => {
+    setPlayerTurn((prev) => (prev === 1 ? 2 : 1));
+    setSelectedPieceIdx(null);
+    setHighlightedValidMoves(null);
+  };
+
+  const onSelectPromotion = (piece) => {
+    setBoardState((prevBoard) => {
+      const newBoard = [...prevBoard];
+      const newPlayerState = [...playerBoardState];
+
+      newBoard[promoteIdx] = piece;
+      newBoard[selectedPieceIdx] = 0;
+      newPlayerState[promoteIdx] = playerTurn;
+      newPlayerState[selectedPieceIdx] = 0;
+
+      setIsInCheck(
+        isKingInCheck(playerTurn === 1 ? 2 : 1, newBoard, newPlayerState)
+      );
+
+      setPlayerBoardState(newPlayerState);
+
+      completeTurn();
+
+      setPromoteIdx(null);
+
+      return newBoard;
+    });
   };
 
   return {
@@ -502,6 +548,9 @@ const usePieceController = () => {
     selectedPieceIdx,
     highlightedValidMoves,
     handleClickSquare,
+    isPromoting: promoteIdx !== null,
+    onSelectPromotion,
+    playerTurn,
   };
 };
 
