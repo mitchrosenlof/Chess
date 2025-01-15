@@ -16,29 +16,9 @@ import useMoveManager from './move-manager';
 
 const usePieceController = () => {
   // State of the location of the pieces of the board.
-  // prettier-ignore
-  const [boardState, setBoardState] = useState( [
-    4, 2, 3, 5, 6, 3, 2, 4, // 0 - empty
-    1, 1, 1, 1, 1, 1, 1, 1, // 1 - Pawn
-    0, 0, 0, 0, 0, 0, 0, 0, // 2 - Knight
-    0, 0, 0, 0, 0, 0, 0, 0, // 3 - Bishop
-    0, 0, 0, 0, 0, 0, 0, 0, // 4 - Rook
-    0, 0, 0, 0, 0, 0, 0, 0, // 5 - Queen
-    1, 1, 1, 1, 1, 1, 1, 1, // 6 - King
-    4, 0, 0, 0, 6, 0, 0, 4,
-  ]);
+  const [boardState, setBoardState] = useState(initialBoard);
   // state of which player owns which pieces
-  // prettier-ignore
-  const [playerBoardState, setPlayerBoardState] = useState([
-    2, 2, 2, 2, 2, 2, 2, 2, // 1 - white
-    2, 2, 2, 2, 2, 2, 2, 2, // 2 - Black
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0,
-    1, 1, 1, 1, 1, 1, 1, 1,
-    1, 0, 0, 0, 1, 0, 0, 1,
-  ]);
+  const [playerBoardState, setPlayerBoardState] = useState(initialPlayerBoard);
   const [playerTurn, setPlayerTurn] = useState(1);
   const [selectedPieceIdx, setSelectedPieceIdx] = useState(null);
   const [highlightedValidMoves, setHighlightedValidMoves] = useState([]);
@@ -48,7 +28,8 @@ const usePieceController = () => {
   });
   const [promoteIdx, setPromoteIdx] = useState(null);
 
-  const { isInCheck, setIsInCheck } = useMoveManager();
+  const { isInCheck, setIsInCheck, checkAttackerIdx, setCheckAttackerIdx } =
+    useMoveManager();
 
   useEffect(() => {
     if (selectedPieceIdx !== null) {
@@ -99,6 +80,7 @@ const usePieceController = () => {
         (piece === BISHOP || piece === QUEEN) &&
         playerState[diagonalKingAttackCheckIdxs[i]] !== player
       ) {
+        setCheckAttackerIdx(diagonalKingAttackCheckIdxs[i]);
         return true;
       }
     }
@@ -108,6 +90,7 @@ const usePieceController = () => {
         (piece === ROOK || piece === QUEEN) &&
         playerState[vertAndHorizKingAttackCheckIdxs[i]] !== player
       ) {
+        setCheckAttackerIdx(vertAndHorizKingAttackCheckIdxs[i]);
         return true;
       }
     }
@@ -117,6 +100,7 @@ const usePieceController = () => {
         piece === KNIGHT &&
         playerState[knightAttackCheckIdxs[i]] !== player
       ) {
+        setCheckAttackerIdx(knightAttackCheckIdxs[i]);
         return true;
       }
     }
@@ -454,6 +438,11 @@ const usePieceController = () => {
     const piece = boardState[clickedBoardIdx];
     if (playerTurn === playerBoardState[clickedBoardIdx]) {
       if (isInCheck && piece !== KING) {
+        // need to kill check attacker else king must be moved
+        const moves = getValidMoves(clickedBoardIdx);
+        if (moves.includes(checkAttackerIdx)) {
+          setSelectedPieceIdx(clickedBoardIdx);
+        }
         return;
       }
       setSelectedPieceIdx(clickedBoardIdx);

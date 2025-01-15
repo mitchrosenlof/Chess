@@ -2,7 +2,7 @@ import { getPieceIcon } from './board-utils';
 
 const PromotionDropdown = ({ onSelect, player }) => {
   return (
-    <div>
+    <div className="border border-black bg-teal-600 rounded">
       <div
         className="h-20 w-20 hover:cursor-pointer hover:bg-teal-100"
         onClick={() => onSelect(2)}
