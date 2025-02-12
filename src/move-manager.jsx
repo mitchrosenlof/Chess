@@ -5,6 +5,7 @@ import { getColIdx, getDestSquareNotation, getRowIdx } from './board-utils';
 const useMoveManager = (boardState, playerState) => {
   const [moveHistory, setMoveHistory] = useState([]);
   const [isInCheck, setIsInCheck] = useState(false);
+  const [isCheckmate, setIsCheckmate] = useState(null);
   const [checkAttackerIdx, setCheckAttackerIdx] = useState(null);
 
   const logMove = (pieceIdx, destIdx) => {
@@ -17,6 +18,8 @@ const useMoveManager = (boardState, playerState) => {
   return {
     isInCheck,
     setIsInCheck,
+    isCheckmate,
+    setIsCheckmate,
     checkAttackerIdx,
     setCheckAttackerIdx,
   };

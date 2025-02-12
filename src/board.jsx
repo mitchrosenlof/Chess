@@ -2,6 +2,8 @@ import React from 'react';
 import { getPieceIcon, getRowIdx } from './board-utils';
 import usePieceController from './piece-controller';
 import PromotionDropdown from './promotion-dropdown';
+import GameOverMenu from './game-over-menu';
+import { initialBoard, initialPlayerBoard } from './constants';
 
 const ChessBoard = () => {
   const {
@@ -13,6 +15,8 @@ const ChessBoard = () => {
     isPromoting,
     onSelectPromotion,
     playerTurn,
+    isCheckmate,
+    resetBoard,
   } = usePieceController();
   const colorSquare = (squareIdx) => {
     // Returns tailwind styles for how the square should currently look
@@ -33,7 +37,7 @@ const ChessBoard = () => {
 
   return (
     <div className="flex">
-      <div className="grid grid-cols-8 gap-0 w-[900px] h-[900px]">
+      <div className="relative grid grid-cols-8 gap-0 w-[900px] h-[900px]">
         {boardState?.map((pieceId, idx) => (
           <div
             key={idx}
@@ -54,6 +58,11 @@ const ChessBoard = () => {
             </div>
           </div>
         ))}
+        {isCheckmate && (
+          <div className="absolute flex justify-center items-center w-full h-full">
+            <GameOverMenu winner={playerTurn} resetBoard={resetBoard} />
+          </div>
+        )}
       </div>
       {isPromoting && (
         <PromotionDropdown onSelect={onSelectPromotion} player={playerTurn} />

@@ -28,17 +28,27 @@ const usePieceController = () => {
   });
   const [promoteIdx, setPromoteIdx] = useState(null);
 
-  const { isInCheck, setIsInCheck, checkAttackerIdx, setCheckAttackerIdx } =
-    useMoveManager();
+  const {
+    isInCheck,
+    setIsInCheck,
+    isCheckmate,
+    setIsCheckmate,
+    checkAttackerIdx,
+    setCheckAttackerIdx,
+  } = useMoveManager();
 
   useEffect(() => {
     if (selectedPieceIdx !== null) {
-      const moves = getValidMoves(selectedPieceIdx);
+      const moves = getValidMoves(
+        selectedPieceIdx,
+        boardState,
+        playerBoardState
+      );
       setHighlightedValidMoves(moves);
     }
   }, [selectedPieceIdx]);
 
-  const isKingInCheck = (player, board, playerState) => {
+  const findKingIdx = (player, board, playerState) => {
     const kingIdx = board.findIndex(
       (piece, idx) => piece === KING && playerState[idx] === player
     );
@@ -47,64 +57,68 @@ const usePieceController = () => {
       throw new Error('King not found for the specified player.');
     }
 
+    return kingIdx;
+  };
+
+  const getPieceAttackers = (pieceIdx, player, board, playerState) => {
+    const attackers = [];
+
     // Pawn attackers
     const direction = player === 1 ? -1 : 1;
-    const leftDiag = kingIdx - 1 + nBoardCols * direction;
-    const rightRight = kingIdx + 1 + nBoardCols * direction;
-    if (
-      (board[leftDiag] === PAWN && playerState[leftDiag] !== player) ||
-      (board[rightRight] === PAWN && playerState[rightRight] !== player)
-    ) {
-      return true;
+    const leftDiag = pieceIdx - 1 + nBoardCols * direction;
+    const rightDiag = pieceIdx + 1 + nBoardCols * direction;
+    if (board[leftDiag] === PAWN && playerState[leftDiag] !== player) {
+      attackers.push(leftDiag);
+    }
+    if (board[rightDiag] === PAWN && playerState[rightDiag] !== player) {
+      attackers.push(rightDiag);
     }
 
     const diagonalKingAttackCheckIdxs = getAllValidBishopMoves(
-      kingIdx,
+      pieceIdx,
       board,
       playerState
     );
     const vertAndHorizKingAttackCheckIdxs = getAllValidRookMoves(
-      kingIdx,
+      pieceIdx,
       board,
       playerState
     );
     const knightAttackCheckIdxs = getAllValidKnightMoves(
-      kingIdx,
+      pieceIdx,
       board,
       playerState
     );
 
     for (let i = 0; i < diagonalKingAttackCheckIdxs.length; i++) {
-      const piece = board[diagonalKingAttackCheckIdxs[i]];
+      const attackerIdx = diagonalKingAttackCheckIdxs[i];
+      const piece = board[attackerIdx];
       if (
         (piece === BISHOP || piece === QUEEN) &&
-        playerState[diagonalKingAttackCheckIdxs[i]] !== player
+        playerState[attackerIdx] !== player
       ) {
-        setCheckAttackerIdx(diagonalKingAttackCheckIdxs[i]);
-        return true;
+        attackers.push(attackerIdx);
       }
     }
     for (let i = 0; i < vertAndHorizKingAttackCheckIdxs.length; i++) {
-      const piece = board[vertAndHorizKingAttackCheckIdxs[i]];
+      const attackerIdx = vertAndHorizKingAttackCheckIdxs[i];
+      const piece = board[attackerIdx];
       if (
         (piece === ROOK || piece === QUEEN) &&
-        playerState[vertAndHorizKingAttackCheckIdxs[i]] !== player
+        playerState[attackerIdx] !== player
       ) {
-        setCheckAttackerIdx(vertAndHorizKingAttackCheckIdxs[i]);
-        return true;
+        attackers.push(attackerIdx);
       }
     }
     for (let i = 0; i < knightAttackCheckIdxs.length; i++) {
-      const piece = board[knightAttackCheckIdxs[i]];
-      if (
-        piece === KNIGHT &&
-        playerState[knightAttackCheckIdxs[i]] !== player
-      ) {
-        setCheckAttackerIdx(knightAttackCheckIdxs[i]);
-        return true;
+      const attackerIdx = knightAttackCheckIdxs[i];
+      const piece = board[attackerIdx];
+      if (piece === KNIGHT && playerState[attackerIdx] !== player) {
+        attackers.push(attackerIdx);
       }
     }
-    return false;
+
+    return attackers;
   };
 
   const filterIllegalMoves = (pieceIdx, moves, player) => {
@@ -117,34 +131,38 @@ const usePieceController = () => {
       newBoardState[pieceIdx] = 0;
       newPlayerBoardState[pieceIdx] = 0;
 
-      return !isKingInCheck(player, newBoardState, newPlayerBoardState);
+      const kingIdx = findKingIdx(player, newBoardState, newPlayerBoardState);
+      return (
+        !getPieceAttackers(kingIdx, player, newBoardState, newPlayerBoardState)
+          .length > 0
+      );
     });
 
     return filteredMoves;
   };
 
-  const getValidMoves = (pieceIdx) => {
-    const piece = boardState[pieceIdx];
+  const getValidMoves = (pieceIdx, board, playerState) => {
+    const piece = board[pieceIdx];
     let moves = [];
 
     switch (piece) {
       case PAWN:
-        moves = getAllValidPawnMoves(pieceIdx, boardState, playerBoardState);
+        moves = getAllValidPawnMoves(pieceIdx, board, playerState);
         break;
       case KNIGHT:
-        moves = getAllValidKnightMoves(pieceIdx, boardState, playerBoardState);
+        moves = getAllValidKnightMoves(pieceIdx, board, playerState);
         break;
       case BISHOP:
-        moves = getAllValidBishopMoves(pieceIdx, boardState, playerBoardState);
+        moves = getAllValidBishopMoves(pieceIdx, board, playerState);
         break;
       case ROOK:
-        moves = getAllValidRookMoves(pieceIdx, boardState, playerBoardState);
+        moves = getAllValidRookMoves(pieceIdx, board, playerState);
         break;
       case QUEEN:
-        moves = getAllValidQueenMoves(pieceIdx, boardState, playerBoardState);
+        moves = getAllValidQueenMoves(pieceIdx, board, playerState);
         break;
       case KING:
-        moves = getAllValidKingMoves(pieceIdx, boardState, playerBoardState);
+        moves = getAllValidKingMoves(pieceIdx, board, playerState);
         break;
       default:
         console.error(
@@ -379,7 +397,11 @@ const usePieceController = () => {
           newPlayerBoard[currentIdx] = playerBoard[pieceIdx];
           newPlayerBoard[pieceIdx] = 0;
 
-          if (isKingInCheck(playerTurn, newBoard, newPlayerBoard)) {
+          const kingIdx = findKingIdx(playerTurn, board, playerState);
+          if (
+            getPieceAttackers(kingIdx, playerTurn, newBoard, newPlayerBoard)
+              .length > 0
+          ) {
             canLeftCastle = false;
           }
         } else {
@@ -399,7 +421,11 @@ const usePieceController = () => {
           newPlayerBoard[currentIdx] = playerBoard[pieceIdx];
           newPlayerBoard[pieceIdx] = 0;
 
-          if (isKingInCheck(playerTurn, newBoard, newPlayerBoard)) {
+          const kingIdx = findKingIdx(playerTurn, board, playerState);
+          if (
+            getPieceAttackers(kingIdx, playerTurn, newBoard, newPlayerBoard)
+              .length > 0
+          ) {
             canRightCastle = false;
           }
         } else {
@@ -439,8 +465,21 @@ const usePieceController = () => {
     if (playerTurn === playerBoardState[clickedBoardIdx]) {
       if (isInCheck && piece !== KING) {
         // need to kill check attacker else king must be moved
-        const moves = getValidMoves(clickedBoardIdx);
-        if (moves.includes(checkAttackerIdx)) {
+        const moves = getValidMoves(
+          clickedBoardIdx,
+          boardState,
+          playerBoardState
+        );
+        const kingIdx = findKingIdx(playerTurn, boardState, playerBoardState);
+        const checkers = getPieceAttackers(
+          kingIdx,
+          playerTurn,
+          boardState,
+          playerBoardState
+        );
+        console.log(checkers);
+        console.log(moves);
+        if (checkers.length === 1 && moves.includes(checkers[0])) {
           setSelectedPieceIdx(clickedBoardIdx);
         }
         return;
@@ -468,9 +507,36 @@ const usePieceController = () => {
         );
 
         // did put opponent in "check"?
-        setIsInCheck(
-          isKingInCheck(playerTurn === 1 ? 2 : 1, newBoard, newPlayerState)
+        const kingIdx = findKingIdx(
+          playerTurn === 1 ? 2 : 1,
+          newBoard,
+          newPlayerState
         );
+        const checkers = getPieceAttackers(
+          kingIdx,
+          playerTurn === 1 ? 2 : 1,
+          newBoard,
+          newPlayerState
+        );
+        setIsInCheck(checkers.length > 0);
+
+        if (checkers.length > 0) {
+          // is checkmate?
+          const kingMoves = getValidMoves(kingIdx, newBoard, newPlayerState);
+          console.log(kingMoves, checkers);
+          if (checkers.length > 1) {
+            setIsCheckmate(kingMoves.length < 1);
+          } else {
+            setIsCheckmate(
+              !getPieceAttackers(
+                checkers[0],
+                playerTurn,
+                newBoard,
+                newPlayerState
+              ).length > 0
+            );
+          }
+        }
 
         // check if move is a castle
         if (boardState[selectedPieceIdx] === KING) {
@@ -505,6 +571,8 @@ const usePieceController = () => {
     setPlayerTurn((prev) => (prev === 1 ? 2 : 1));
     setSelectedPieceIdx(null);
     setHighlightedValidMoves(null);
+    setCheckAttackerIdx(null);
+    setIsInCheck(false);
   };
 
   const onSelectPromotion = (piece) => {
@@ -517,8 +585,14 @@ const usePieceController = () => {
       newPlayerState[promoteIdx] = playerTurn;
       newPlayerState[selectedPieceIdx] = 0;
 
+      const kingIdx = findKingIdx(player, board, playerState);
       setIsInCheck(
-        isKingInCheck(playerTurn === 1 ? 2 : 1, newBoard, newPlayerState)
+        getPieceAttackers(
+          kingIdx,
+          playerTurn === 1 ? 2 : 1,
+          newBoard,
+          newPlayerState
+        ).length > 0
       );
 
       setPlayerBoardState(newPlayerState);
@@ -531,15 +605,28 @@ const usePieceController = () => {
     });
   };
 
+  const resetBoard = () => {
+    setBoardState(initialBoard);
+    setPlayerBoardState(initialPlayerBoard);
+    setIsCheckmate(false);
+    setIsInCheck(false);
+    setPlayerTurn(1);
+  };
+
   return {
     boardState,
+    setBoardState,
     playerBoardState,
+    setPlayerBoardState,
     selectedPieceIdx,
     highlightedValidMoves,
     handleClickSquare,
     isPromoting: promoteIdx !== null,
     onSelectPromotion,
     playerTurn,
+    isCheckmate,
+    setIsCheckmate,
+    resetBoard,
   };
 };
 
